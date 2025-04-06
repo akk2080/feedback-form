@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Feedback Form</title>
+        <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <style>
+            #root{
+                text-align: center;
+            }
+
+            button{
+                cursor: pointer;
+            }
+
+            .formContainer{
+                display: flex;
+                flex-direction: column;
+                gap: 30px;
+             
+                justify-content: center;
+                align-items: center;
+                
+            }
+
+            .feedbacks{
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 20px;
+                
+            }
+
+            .card{
+                box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.2);
+                border-radius: 5px;
+                padding: 15px;
+                text-align: center;
+                padding-top: 0px;
+                margin-top: 10px;
+                width: 100%;
+                max-width: 500px;
+                
+                
+            }
+
+            
+
+            .card:hover{
+                transform: translateY(-5px);
+            }
+
+
+        </style>
+</head>
+<body>
+
+    <div id="root">
+      
+    </div>
+
+    <script type="text/babel">
+
+        function FeedbackList({list}){
+            
+            let [mylist, setMyList] = React.useState([]);
+            
+            React.useEffect(()=>{
+                setInitial();
+               
+            }, [list]);
+
+            async function setInitial(){
+                setMyList(list);
+            }
+
+            async function removeItem(e){
+                let id = e.target.value;
+                console.log(e.target.value);
+                try {
+                    let res = await fetch('https://feedbackboard-3b5d4-default-rtdb.firebaseio.com/feedbacks/' + id + '.json', {
+                    method:'DELETE'
+                    });
+
+                    if(!res.ok)
+                        throw new Error(res.status);
+                    let temp = list.filter(t => { return t.id != id});
+                    console.log(temp);
+                    setMyList(temp);
+                } catch (error) {
+                    alert(error.message);
+                }
+               
+            }
+
+            return(
+                <>
+                    {mylist.map((item, index) => {
+                       return(<>
+                            <div className='card'>
+                                <FeedbackItem item={item} key={index}/>
+                                <button value={item.id} onClick={removeItem} >remove</button>
+                            </div>
+                        </>) ;
+                        
+                    })}
+                </>
+            )
+        }
+        
+        function FeedbackItem({item}){
+            
+          
+            return(
+                <>
+                   
+                        <h2>{item.userName}</h2>
+                        <h3>{item.email}</h3>
+                        <p>{item.comment}</p>
+                       
+                  
+                </>
+
+            )
+        }
+
+        function FeedbackForm(){
+            let [data, setData] = React.useState({userName:'', email:'', comment:''});
+            let [feedbacks, setFeedbacks] = React.useState([]);
+
+            function updateData(e){
+               let targetName = e.target.name;
+               let targetValue = e.target.value;
+              
+                setData({...data, [targetName]:targetValue});
+            }
+
+            React.useEffect(()=>{
+                fetchFeedbacks();
+            }, []);
+
+            async function postData(e){
+                e.preventDefault();
+
+                try {
+                    let res = await fetch('https://feedbackboard-3b5d4-default-rtdb.firebaseio.com/feedbacks.json', {
+                    method:'POST',
+                    headers:{
+                        'Content-Type':'application/json'
+                    },
+                    body: JSON.stringify(data)
+                    })
+
+                    alert('data sent successfully!')
+                } catch (error) {
+                    alert('Oops something went wrong');
+                }
+                let clearFields = {
+                    userName:'', email:'', comment:''
+                }
+                setData(clearFields);
+                fetchFeedbacks();
+               
+            }
+
+            async function fetchFeedbacks(){
+                let res = await fetch('https://feedbackboard-3b5d4-default-rtdb.firebaseio.com/feedbacks.json');
+                if(!res.ok)
+                    throw new Error(res.status);
+                let data = await res.json();
+                let finalData = Object.entries(data).map(e=>{ return {id:e[0], ...e[1]}});
+                console.log(finalData);
+                setFeedbacks(finalData);
+            }
+            
+            return(
+                <>
+                    <h1>Feedback Form</h1>
+                    <hr/>
+                    <form onSubmit={postData} className='formContainer'>
+                        <input type="text" placeholder='Enter Name' name='userName' onChange={updateData} value={data.userName}/>
+                        <input type="Email" placeholder='Enter Email' name='email' onChange={updateData} value={data.email}/>
+                       
+                        <textarea  placeholder='Write your feedback here' name='comment' onChange={updateData} value={data.comment}/>
+                        
+                        <button type='submit'>Submit</button>
+
+
+                    </form>
+                    <hr/>
+                    <div className='feedbacks'>
+                        <FeedbackList list={feedbacks}/>
+                    </div>
+                   
+                </>
+            )
+        }
+
+        function App(){
+            return(
+                <>  
+
+                    <FeedbackForm/>
+                    
+                  
+                </>
+            )
+        }
+
+        let root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App/>);
+        
+    </script>
+    
+</body>
+</html>
